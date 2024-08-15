@@ -1,8 +1,8 @@
 import json
+import logging
 import os
 from shutil import rmtree
 from typing import Any
-from collections import OrderedDict
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
@@ -94,32 +94,24 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
             print(f"Article_output_dir: {directory}")
 
             try:
-                content = []
-                with open(f"{directory}/storm_gen_article_polished.txt", "r+") as f:
-                    content.append(str(f.read()))
-                final_results = ("".join(content).replace('","', "").replace('"', "\n").replace("\n\n", ""))
+                with open(f"{directory}/storm_gen_article_polished.txt") as f:
+                    final_content = f.read()
+                with open(f"{directory}/url_to_info.json") as f:
+                    final_url_to_info = f.read()
 
-                urls_to_unified_indexes = {}
-                with open(f"{directory}/url_to_info.json", "r+") as f:
-                    data = json.load(f)
-                url_unified_index = data.get("url_to_unified_index")
-                for url, unified_index in url_unified_index.items():
-                    if unified_index not in urls_to_unified_indexes.keys():
-                        urls_to_unified_indexes[unified_index] = url
-
-                # TODO add other files
-
-                if settings.DELETE_ARTICLE_OUTPUT_DIR:
-                    rmtree(directory)
+                # TODO can add other files ...
 
                 yield json.dumps({"event_id": 6, "message": "Updating article in database", "code": 200, "is_done": False}) + '\n\n'
 
                 try:
                     update_article(session=session, db_article=article, article_in=ArticleUpdate(
                         title=article.title,
-                        content=final_results,
-                        url_to_info=json.dumps(OrderedDict(sorted(urls_to_unified_indexes.items()))),
+                        content=final_content,
+                        url_to_info=final_url_to_info,
                         state="completed"))
+
+                    if settings.DELETE_ARTICLE_OUTPUT_DIR:
+                        rmtree(directory)
 
                     yield json.dumps({"event_id": 7, "message": "Have successfully uploaded to db, sending article content back!", "is_done": True, "code": 200}) + '\n\n'
                 except Exception as e:
