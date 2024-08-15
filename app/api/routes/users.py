@@ -33,7 +33,7 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
 def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     user = crud.get_user_by_username(session=session, username=user_in.username)
     if user:
-        raise HTTPException(status_code=400,detail="The user with this email already exists in the system." )
+        raise HTTPException(status_code=400, detail="The user with this username already exists in the system.")
 
     user = crud.create_user(session=session, user_create=user_in)
 
