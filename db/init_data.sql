@@ -18,5 +18,6 @@ CREATE TABLE `article` (
   `state` varchar(50) NOT NULL DEFAULT '',
   `udate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `cdate` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unq_title` (`owner_id`,`title`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

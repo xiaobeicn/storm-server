@@ -30,9 +30,7 @@ class ArticleBase(SQLModel):
 
 
 class ArticleCreate(ArticleBase):
-    owner_id: int = Field(nullable=False)
-    status: int = Field(default="0")
-    state: str = Field(default="", max_length=50)
+    pass
 
 
 class ArticleUpdate(ArticleBase):

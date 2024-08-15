@@ -20,6 +20,8 @@ router = APIRouter()
 
 @router.post("/start-model", response_model=ArticleCreatePublic)
 def start_model(*, session: SessionDep, current_user: CurrentUser, article_in: ArticleCreate) -> Any:
+    if session.query(Article).filter(Article.title == article_in.title, Article.owner_id == current_user.id).first():
+        raise HTTPException(status_code=400, detail="Article with this title already exists")
     return create_article(session=session, article_in=article_in, owner_id=current_user.id)
 
 
@@ -41,7 +43,7 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
 
         runner = None
         if article.state == "initiated":
-            runner = storm.set_storm_runner()
+            runner = storm.set_storm_runner(current_user.username)
             update_article(session=session, db_article=article, article_in=ArticleUpdate(title=article.title, state="pre_writing"))
             yield json.dumps({"event_id": 1, "message": "Have successfully set up llm provider", "is_done": False, "code": 200}) + '\n\n'
 
@@ -49,7 +51,7 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
             yield json.dumps({"event_id": 2, "message": "I am brain**STORM**ing now to research the topic. (This may take 2-3 minutes.)", "is_done": False, "code": 200}) + '\n\n'
 
             if runner is None:
-                runner = storm.set_storm_runner()
+                runner = storm.set_storm_runner(current_user.username)
 
             runner.run(
                 topic=article.title,
@@ -66,7 +68,7 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
             yield json.dumps({"event_id": 4, "message": "Now I will connect the information I found for your reference. (This may take 4-5 minutes.)", "is_done": False, "code": 200}) + '\n\n'
 
             if runner is None:
-                runner = storm.set_storm_runner()
+                runner = storm.set_storm_runner(current_user.username)
 
             runner.run(
                 topic=article.title,
@@ -86,7 +88,7 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
 
         if article.state == "update_database":
             if runner is None:
-                directory = os.path.join(settings.OUTPUT_DIR, article.title.replace(' ', '_').replace('/', '_'))
+                directory = os.path.join(settings.OUTPUT_DIR, current_user.username, article.title.replace(' ', '_').replace('/', '_'))
             else:
                 directory = runner.article_output_dir
             print(f"Article_output_dir: {directory}")

@@ -11,8 +11,8 @@ from knowledge_storm.rm import YouRM
 from app.core.config import settings
 
 
-def set_storm_runner() -> STORMWikiRunner:
-    current_working_dir = settings.OUTPUT_DIR
+def set_storm_runner(user_name: str) -> STORMWikiRunner:
+    current_working_dir = os.path.join(settings.OUTPUT_DIR, user_name)
     if not os.path.exists(current_working_dir):
         os.makedirs(current_working_dir)
     print(f"Successfully current_working_dir:{current_working_dir}")
