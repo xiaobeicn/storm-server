@@ -1,11 +1,14 @@
 import os
+import threading
+from typing import Optional, Literal, Any
+
+import dspy
 
 from knowledge_storm import (
     STORMWikiRunnerArguments,
     STORMWikiRunner,
     STORMWikiLMConfigs,
 )
-from knowledge_storm.lm import OpenAIModel
 from knowledge_storm.rm import YouRM
 
 from app.core.config import settings
@@ -19,7 +22,15 @@ def set_storm_runner(user_name: str) -> STORMWikiRunner:
 
     llm_configs = STORMWikiLMConfigs()
     llm_configs.init_openai_model(openai_api_key=settings.OPENAI_API_KEY, openai_type='openai')
-    llm_configs.set_question_asker_lm(OpenAIModel(model='gpt-4-1106-preview', api_key=settings.OPENAI_API_KEY, api_provider='openai', max_tokens=500, temperature=1.0, top_p=0.9))
+
+    openai_kwargs = {'api_key': settings.OPENAI_API_KEY, 'api_provider': 'openai', 'temperature': 1.0, 'top_p': 0.9}
+
+    llm_configs.set_conv_simulator_lm(OpenAIModel(model='gpt-3.5-turbo', max_tokens=500, **openai_kwargs))
+    llm_configs.set_question_asker_lm(OpenAIModel(model='gpt-4-1106-preview', max_tokens=500, **openai_kwargs))
+    llm_configs.set_outline_gen_lm(OpenAIModel(model='gpt-4-0125-preview', max_tokens=400, **openai_kwargs))
+    llm_configs.set_article_gen_lm(OpenAIModel(model='gpt-4o-2024-05-13', max_tokens=700, **openai_kwargs))
+    llm_configs.set_article_polish_lm(OpenAIModel(model='gpt-4o-2024-05-13', max_tokens=4000, **openai_kwargs))
+
     engine_args = STORMWikiRunnerArguments(output_dir=current_working_dir, max_conv_turn=3, max_perspective=3, search_top_k=3, retrieve_top_k=5)
     print("Successfully set up engine args")
 
@@ -31,3 +42,96 @@ def set_storm_runner(user_name: str) -> STORMWikiRunner:
 
     return runner
 
+
+def check_sensitive_info(text: str) -> bool:
+    ai_model = OpenAIModel(model='gpt-3.5-turbo', max_tokens=10, api_key=settings.OPENAI_API_KEY, api_provider='openai', temperature=1.0, top_p=0.9)
+    prompt = (
+        "Based on China's situation, please determine whether the following content contains sensitive information, including but not limited to pornographic or adult content, current affairs and politics, drugs, gambling, drug abuse, violence, group incidents, etc. Please answer Yes or No\n"
+        "===\n"
+        f"{text}"
+    )
+    response = ai_model.request(prompt)
+    print(response)
+    if response['choices'][0]['message']['content'] == 'Yes':
+        return False
+    else:
+        return True
+
+
+class OpenAIModel(dspy.OpenAI):
+    def __init__(
+            self,
+            model: str = "gpt-3.5-turbo-instruct",
+            api_key: Optional[str] = None,
+            model_type: Literal["chat", "text"] = None,
+            **kwargs
+    ):
+        super().__init__(model=model, api_key=api_key, model_type=model_type, **kwargs)
+        self._token_usage_lock = threading.Lock()
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+
+    def log_usage(self, response):
+        usage_data = response.get('usage')
+        if usage_data:
+            with self._token_usage_lock:
+                self.prompt_tokens += usage_data.get('prompt_tokens', 0)
+                self.completion_tokens += usage_data.get('completion_tokens', 0)
+
+    def get_usage_and_reset(self):
+        usage = {
+            self.kwargs.get('model') or self.kwargs.get('engine'):
+                {'prompt_tokens': self.prompt_tokens, 'completion_tokens': self.completion_tokens}
+        }
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+
+        return usage
+
+    def __call__(
+            self,
+            prompt: str,
+            only_completed: bool = True,
+            return_sorted: bool = False,
+            **kwargs,
+    ) -> list[dict[str, Any]]:
+
+        assert only_completed, "for now"
+        assert return_sorted is False, "for now"
+
+        prompt_modified = (
+            f"{prompt}\n"
+            "Please answer in Chinese"
+        )
+        response = self.request(prompt_modified, **kwargs)
+
+        self.log_usage(response)
+
+        choices = response["choices"]
+
+        completed_choices = [c for c in choices if c["finish_reason"] != "length"]
+
+        if only_completed and len(completed_choices):
+            choices = completed_choices
+
+        completions = [self._get_choice_text(c) for c in choices]
+        if return_sorted and kwargs.get("n", 1) > 1:
+            scored_completions = []
+
+            for c in choices:
+                tokens, logprobs = (
+                    c["logprobs"]["tokens"],
+                    c["logprobs"]["token_logprobs"],
+                )
+
+                if "<|endoftext|>" in tokens:
+                    index = tokens.index("<|endoftext|>") + 1
+                    tokens, logprobs = tokens[:index], logprobs[:index]
+
+                avglog = sum(logprobs) / len(logprobs)
+                scored_completions.append((avglog, self._get_choice_text(c)))
+
+            scored_completions = sorted(scored_completions, reverse=True)
+            completions = [c for _, c in scored_completions]
+
+        return completions

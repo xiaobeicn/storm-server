@@ -22,6 +22,9 @@ router = APIRouter()
 def start_model(*, session: SessionDep, current_user: CurrentUser, article_in: ArticleCreate) -> Any:
     if session.query(Article).filter(Article.title == article_in.title, Article.owner_id == current_user.id).first():
         raise HTTPException(status_code=400, detail="Article with this title already exists")
+    if not storm.check_sensitive_info(article_in.title):
+        raise HTTPException(status_code=400, detail="Sorry, the topic you entered contains sensitive information. Please try another topic that interests you.")
+
     return create_article(session=session, article_in=article_in, owner_id=current_user.id)
 
 
