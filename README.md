@@ -20,6 +20,8 @@ cp .env.example .env
 
 ### Install
 ```sh
+conda create -n storm-server python=3.11
+conda activate storm-server
 pip install -r requirements.txt
 ```
 
