@@ -65,7 +65,7 @@ uvicorn main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
 ### Run log
-```log
+```text
 Successfully current_working_dir:./output/user
 Successfully set up engine args
 Successfully get rm from you.com
@@ -114,6 +114,20 @@ run_article_polishing_module: {'YouRM': 0}
 Finished running runner!
 Article_output_dir: ./output/user/title
 Fully parsed file, sending response back!
+```
+
+### Output file tree
+```text
+.
+├── conversation_log.json
+├── direct_gen_outline.txt
+├── llm_call_history.jsonl
+├── raw_search_results.json
+├── run_config.json
+├── storm_gen_article.txt
+├── storm_gen_article_polished.txt
+├── storm_gen_outline.txt
+└── url_to_info.json
 ```
 
 ### SSE
