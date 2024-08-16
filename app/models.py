@@ -10,6 +10,11 @@ class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=40)
 
 
+class UpdatePassword(SQLModel):
+    current_password: str = Field(min_length=8, max_length=40)
+    new_password: str = Field(min_length=8, max_length=40)
+
+
 class User(UserBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     password: str
