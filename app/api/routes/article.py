@@ -121,6 +121,7 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
                     yield json.dumps({"event_id": 7, "message": f"Failed to upload article to database: {str(e)}", "code": 500, "is_done": False}) + '\n\n'
             except Exception as e:
                 yield json.dumps({"event_id": 6, "message": f"Failed parsing file, error is: {e}", "code": 500, "is_done": False}) + '\n\n'
+
         print("Fully parsed file, sending response back!\n")
     except Exception as e:
         print("Error in create_article: ", e)
