@@ -1,4 +1,3 @@
-from typing import Optional
 from sqlmodel import Field, SQLModel
 
 
@@ -16,7 +15,7 @@ class UpdatePassword(SQLModel):
 
 
 class User(UserBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     password: str
     status: int = Field(default=0)
 
@@ -45,7 +44,7 @@ class ArticleUpdate(ArticleBase):
 
 
 class Article(ArticleBase, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     content: str | None = Field(default=None)
     url_to_info: str | None = Field(default=None)
     status: int = Field(default="0")

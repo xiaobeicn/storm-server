@@ -1,11 +1,10 @@
 import logging
 import os
 import threading
-from typing import Optional, Literal, Any, Callable, Union, List
+from typing import Literal, Any, Callable, Union, List
 
 import dspy
 import requests
-
 from knowledge_storm import (
     STORMWikiRunnerArguments,
     STORMWikiRunner,
@@ -63,7 +62,7 @@ class OpenAIModel(dspy.OpenAI):
     def __init__(
             self,
             model: str = "gpt-3.5-turbo-instruct",
-            api_key: Optional[str] = None,
+            api_key: str | None = None,
             model_type: Literal["chat", "text"] = None,
             **kwargs
     ):
