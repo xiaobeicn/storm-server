@@ -30,7 +30,7 @@ class UsersPublic(SQLModel):
 
 
 class ArticleBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
+    title: str = Field(index=True, min_length=1, max_length=255)
 
 
 class ArticleCreate(ArticleBase):
