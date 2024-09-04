@@ -5,14 +5,11 @@ from typing import Annotated, Any, Literal
 from pydantic import (
     AnyUrl,
     BeforeValidator,
-    HttpUrl,
-    PostgresDsn,
     computed_field,
-    model_validator,
+    MySQLDsn,
 )
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Self
 
 
 def parse_cors(v: Any) -> list[str] | str:
@@ -56,7 +53,7 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
+    def SQLALCHEMY_DATABASE_URI(self) -> MySQLDsn:
         return MultiHostUrl.build(
             scheme="mysql+pymysql",
             username=self.DB_USER,
