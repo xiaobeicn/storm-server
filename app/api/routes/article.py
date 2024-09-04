@@ -28,7 +28,7 @@ def start_model(*, session: SessionDep, current_user: CurrentUser, article_in: A
     return create_article(session=session, article_in=article_in, owner_id=current_user.id)
 
 
-@router.post("/{article_id}/update-sse")
+@router.get("/{article_id}/update-sse")
 def update_sse(*, session: SessionDep, current_user: CurrentUser, article_id: int):
     json_contents = run_model(article_id, session, current_user)
     return StreamingResponse(json_contents, media_type='text/event-stream')
@@ -48,10 +48,10 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
         if article.state == "initiated":
             runner = storm.set_storm_runner(current_user.username)
             update_article(session=session, db_article=article, article_in=ArticleUpdate(title=article.title, state="pre_writing"))
-            yield json.dumps({"event_id": 1, "message": "Have successfully set up llm provider", "is_done": False, "code": 200}) + '\n\n'
+            yield "data: " + json.dumps({"event_id": 1, "message": "Have successfully set up llm provider", "is_done": False, "code": 200}) + '\n\n'
 
         if article.state == "pre_writing":
-            yield json.dumps({"event_id": 2, "message": "I am brain**STORM**ing now to research the topic. (This may take 2-3 minutes.)", "is_done": False, "code": 200}) + '\n\n'
+            yield "data: " + json.dumps({"event_id": 2, "message": "I am brain**STORM**ing now to research the topic. (This may take 2-3 minutes.)", "is_done": False, "code": 200}) + '\n\n'
 
             if runner is None:
                 runner = storm.set_storm_runner(current_user.username)
@@ -65,10 +65,10 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
             print("Have successfully finished the running research and generate_outline process")
 
             update_article(session=session, db_article=article, article_in=ArticleUpdate(title=article.title, state="final_writing"))
-            yield json.dumps({"event_id": 3, "message": "brain ** STORM ** ing complete!", "is_done": False, "code": 200}) + '\n\n'
+            yield "data: " + json.dumps({"event_id": 3, "message": "brain ** STORM ** ing complete!", "is_done": False, "code": 200}) + '\n\n'
 
         if article.state == "final_writing":
-            yield json.dumps({"event_id": 4, "message": "Now I will connect the information I found for your reference. (This may take 4-5 minutes.)", "is_done": False, "code": 200}) + '\n\n'
+            yield "data: " + json.dumps({"event_id": 4, "message": "Now I will connect the information I found for your reference. (This may take 4-5 minutes.)", "is_done": False, "code": 200}) + '\n\n'
 
             if runner is None:
                 runner = storm.set_storm_runner(current_user.username)
@@ -87,7 +87,7 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
             print("Finished running runner!")
 
             update_article(session=session, db_article=article, article_in=ArticleUpdate(title=article.title, state="update_database"))
-            yield json.dumps({"event_id": 5, "message": "information synthesis complete!", "is_done": False, "code": 200}) + '\n\n'
+            yield "data: " + json.dumps({"event_id": 5, "message": "information synthesis complete!", "is_done": False, "code": 200}) + '\n\n'
 
         if article.state == "update_database":
             if runner is None:
@@ -104,7 +104,7 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
 
                 # TODO can add other files ...
 
-                yield json.dumps({"event_id": 6, "message": "Updating article in database", "code": 200, "is_done": False}) + '\n\n'
+                yield "data: " + json.dumps({"event_id": 6, "message": "Updating article in database", "code": 200, "is_done": False}) + '\n\n'
 
                 try:
                     update_article(session=session, db_article=article, article_in=ArticleUpdate(
@@ -116,16 +116,16 @@ def run_model(article_id: int, session: SessionDep, current_user: CurrentUser):
                     if settings.DELETE_ARTICLE_OUTPUT_DIR:
                         rmtree(directory)
 
-                    yield json.dumps({"event_id": 7, "message": "Have successfully uploaded to db, sending article content back!", "is_done": True, "code": 200}) + '\n\n'
+                    yield "data: " + json.dumps({"event_id": 7, "message": "Have successfully uploaded to db, sending article content back!", "is_done": True, "code": 200}) + '\n\n'
                 except Exception as e:
-                    yield json.dumps({"event_id": 7, "message": f"Failed to upload article to database: {str(e)}", "code": 500, "is_done": False}) + '\n\n'
+                    yield "data: " + json.dumps({"event_id": 7, "message": f"Failed to upload article to database: {str(e)}", "code": 500, "is_done": False}) + '\n\n'
             except Exception as e:
-                yield json.dumps({"event_id": 6, "message": f"Failed parsing file, error is: {e}", "code": 500, "is_done": False}) + '\n\n'
+                yield "data: " + json.dumps({"event_id": 6, "message": f"Failed parsing file, error is: {e}", "code": 500, "is_done": False}) + '\n\n'
 
         print("Fully parsed file, sending response back!\n")
     except Exception as e:
         print("Error in create_article: ", e)
-        yield json.dumps({"event_id": 1, "message": f"Failed to create article, error is: {e}", "is_done": True, "code": 500}) + '\n\n'
+        yield "data: " + json.dumps({"event_id": 1, "message": f"Failed to create article, error is: {e}", "is_done": False, "code": 500}) + '\n\n'
 
 
 @router.get("/{article_id}/state", response_model=ArticleStatePublic)
