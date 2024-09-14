@@ -64,58 +64,6 @@ python main.py
 }
 ```
 
-### Run log
-```text
-Successfully current_working_dir:./output/user
-Successfully set up engine args
-Successfully get rm from you.com
-Successfully get runner
-openai._base_client : INFO     : Retrying request to /chat/completions in 0.766432 seconds
-knowledge_storm.interface : INFO     : run_knowledge_curation_module executed in 109.1289 seconds
-knowledge_storm.interface : INFO     : run_outline_generation_module executed in 26.3068 seconds
-Have successfully finished the running research and generate_outline process
-sentence_transformers.SentenceTransformer : INFO     : Use pytorch device_name: cpu
-sentence_transformers.SentenceTransformer : INFO     : Load pretrained SentenceTransformer: paraphrase-MiniLM-L6-v2
-knowledge_storm.interface : INFO     : run_article_generation_module executed in 17.6854 seconds
-knowledge_storm.interface : INFO     : run_article_polishing_module executed in 7.2693 seconds
-Have successfully finished the running generate_article and polish_article process
-Have successfully finished the article generation process
-***** Execution time *****
-run_knowledge_curation_module: 109.1289 seconds
-run_outline_generation_module: 26.3068 seconds
-run_article_generation_module: 17.6854 seconds
-run_article_polishing_module: 7.2693 seconds
-***** Token usage of language models: *****
-run_knowledge_curation_module
-    gpt-3.5-turbo: {'prompt_tokens': 2557, 'completion_tokens': 790}
-    gpt-4-1106-preview: {'prompt_tokens': 3390, 'completion_tokens': 1645}
-    gpt-4-0125-preview: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4o-2024-05-13: {'prompt_tokens': 0, 'completion_tokens': 0}
-run_outline_generation_module
-    gpt-3.5-turbo: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4-1106-preview: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4-0125-preview: {'prompt_tokens': 1321, 'completion_tokens': 676}
-    gpt-4o-2024-05-13: {'prompt_tokens': 0, 'completion_tokens': 0}
-run_article_generation_module
-    gpt-3.5-turbo: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4-1106-preview: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4-0125-preview: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4o-2024-05-13: {'prompt_tokens': 5299, 'completion_tokens': 2995}
-run_article_polishing_module
-    gpt-3.5-turbo: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4-1106-preview: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4-0125-preview: {'prompt_tokens': 0, 'completion_tokens': 0}
-    gpt-4o-2024-05-13: {'prompt_tokens': 3186, 'completion_tokens': 526}
-***** Number of queries of retrieval models: *****
-run_knowledge_curation_module: {'YouRM': 9}
-run_outline_generation_module: {'YouRM': 0}
-run_article_generation_module: {'YouRM': 0}
-run_article_polishing_module: {'YouRM': 0}
-Finished running runner!
-Article_output_dir: ./output/user/title
-Fully parsed file, sending response back!
-```
-
 ### Output file tree
 ```text
 .
