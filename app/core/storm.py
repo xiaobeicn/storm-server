@@ -1,4 +1,4 @@
-import logging
+import json
 import os
 import threading
 from typing import Literal, Any, Callable, Union, List
@@ -10,58 +10,68 @@ from knowledge_storm import (
     STORMWikiRunner,
     STORMWikiLMConfigs,
 )
+from knowledge_storm.rm import SerperRM
+from knowledge_storm.storm_wiki.modules.callback import BaseCallbackHandler
 
+from app.core import log
 from app.core.config import settings
+from app.constants import LLMModel
+
+logger = log.setup_logging()
 
 
-def set_storm_runner(user_name: str) -> STORMWikiRunner:
-    current_working_dir = os.path.join(settings.OUTPUT_DIR, user_name)
+def set_storm_runner(user_id: int) -> STORMWikiRunner:
+    current_working_dir = os.path.join(settings.OUTPUT_DIR, str(user_id))
     if not os.path.exists(current_working_dir):
         os.makedirs(current_working_dir)
-    print(f"Successfully current_working_dir:{current_working_dir}")
+    logger.info(f"Successfully current_working_dir:{current_working_dir}")
 
     llm_configs = STORMWikiLMConfigs()
     llm_configs.init_openai_model(openai_api_key=settings.OPENAI_API_KEY, openai_type='openai')
 
     openai_kwargs = {'api_key': settings.OPENAI_API_KEY, 'api_provider': 'openai', 'temperature': 1.0, 'top_p': 0.9}
 
-    llm_configs.set_conv_simulator_lm(OpenAIModel(model='gpt-3.5-turbo', max_tokens=500, **openai_kwargs))
-    llm_configs.set_question_asker_lm(OpenAIModel(model='gpt-4-1106-preview', max_tokens=500, **openai_kwargs))
-    llm_configs.set_outline_gen_lm(OpenAIModel(model='gpt-4-0125-preview', max_tokens=400, **openai_kwargs))
-    llm_configs.set_article_gen_lm(OpenAIModel(model='gpt-4o-2024-05-13', max_tokens=700, **openai_kwargs))
-    llm_configs.set_article_polish_lm(OpenAIModel(model='gpt-4o-2024-05-13', max_tokens=4000, **openai_kwargs))
+    llm_configs.set_conv_simulator_lm(OpenAIModel(model=LLMModel.GPT_4O_MINI, max_tokens=500, **openai_kwargs))
+    llm_configs.set_question_asker_lm(OpenAIModel(model=LLMModel.GPT_4O_MINI, max_tokens=500, **openai_kwargs))
+    llm_configs.set_outline_gen_lm(OpenAIModel(model=LLMModel.GPT_4O, max_tokens=400, **openai_kwargs))
+    llm_configs.set_article_gen_lm(OpenAIModel(model=LLMModel.GPT_4O, max_tokens=700, **openai_kwargs))
+    llm_configs.set_article_polish_lm(OpenAIModel(model=LLMModel.GPT_4O, max_tokens=4000, **openai_kwargs))
 
     engine_args = STORMWikiRunnerArguments(output_dir=current_working_dir, max_conv_turn=3, max_perspective=3, search_top_k=3, retrieve_top_k=5)
-    print("Successfully set up engine args")
+    logger.info("Successfully set up engine args")
 
-    rm = YouRM(ydc_api_key=settings.YDC_API_KEY, k=engine_args.search_top_k)
-    print("Successfully get rm from you.com")
+    if LLMModel.RM == 'YouRM':
+        rm = YouRM(ydc_api_key=settings.YDC_API_KEY, k=engine_args.search_top_k)
+    else:
+        data = {"autocorrect": True, "location": "China", "gl": "cn", "hl": "zh-cn", "num": 10, "page": 1}
+        rm = SerperRM(serper_search_api_key=settings.SERPER_API_KEY, query_params=data)
+    logger.info("Successfully get rm")
 
     runner = STORMWikiRunner(engine_args, llm_configs, rm)
-    print("Successfully get runner")
+    logger.info("Successfully get runner")
 
     return runner
 
 
-def check_sensitive_info(text: str) -> bool:
-    ai_model = OpenAIModel(model='gpt-3.5-turbo', max_tokens=10, api_key=settings.OPENAI_API_KEY, api_provider='openai', temperature=1.0, top_p=0.9)
+def check_sensitive_info(text: str):
+    ai_model = OpenAIModel(model='gpt-4o-mini-2024-07-18', max_tokens=10, api_key=settings.OPENAI_API_KEY, api_provider='openai', temperature=1.0, top_p=0.9)
     prompt = (
-        "Based on China's situation, please determine whether the following content contains sensitive information, including but not limited to pornographic or adult content, current affairs and politics, drugs, gambling, drug abuse, violence, group incidents, etc. Please answer Yes or No\n"
+        "Please determine if the following topic complies with regulations:\n"
+        "1. The topic must be meaningful and specific. Vague or irrelevant content (e.g., random numbers, single words without context) is not acceptable. tag '1'\n"
+        "2. According to regulations in China, it must not contain sensitive information, including but not limited to pornography or adult content, current affairs and politics, drugs, gambling, drug abuse, violence, group events, etc. tag '2'\n"
+        "Return '0' if it complies, return tag if it does not comply\n"
         "===\n"
-        f"{text}"
+        f"[{text}]"
     )
     response = ai_model.request(prompt)
-    print(response)
-    if response['choices'][0]['message']['content'] == 'Yes':
-        return False
-    else:
-        return True
+
+    return response
 
 
 class OpenAIModel(dspy.OpenAI):
     def __init__(
             self,
-            model: str = "gpt-3.5-turbo-instruct",
+            model: str = "gpt-4o-mini",
             api_key: str | None = None,
             model_type: Literal["chat", "text"] = None,
             **kwargs
@@ -170,10 +180,13 @@ class YouRM(dspy.Retrieve):
         for query in queries:
             try:
                 headers = {"X-API-Key": self.ydc_api_key}
-                results = requests.get(
+                response = requests.get(
                     f"https://api.ydc-index.io/search?query={query}&country=CN",
                     headers=headers,
-                ).json()
+                )
+                results = response.json()
+                if 'error_code' in results:
+                    raise Exception(f"{results}")
 
                 authoritative_results = []
                 for r in results['hits']:
@@ -182,6 +195,65 @@ class YouRM(dspy.Retrieve):
                 if 'hits' in results:
                     collected_results.extend(authoritative_results[:self.k])
             except Exception as e:
-                logging.error(f'Error occurs when searching query {query}: {e}')
+                logger.error(f'Error occurs when searching query {query}: {e}')
 
         return collected_results
+
+
+class CallbackHandler(BaseCallbackHandler):
+    def __init__(self, redis_client, redis_key):
+        self.redis_client = redis_client
+        self.redis_key = redis_key
+
+    def on_identify_perspective_start(self, **kwargs):
+        logger.info('on_identify_perspective_start')
+
+        v = json.dumps({"state": "identify_perspective_start", "message": "Start identifying different perspectives for researching the topic. (Step 1 / 4)", "is_done": False, "code": 200})
+        self.redis_client.rpush(self.redis_key, v)
+
+    def on_identify_perspective_end(self, perspectives: list[str], **kwargs):
+        logger.info('on_identify_perspective_end')
+
+        perspective_list = "\n- ".join(perspectives)
+        v = json.dumps({"state": "identify_perspective_end", "message": f"Finish identifying perspectives. Will now start gathering information from the following perspectives:\n- {perspective_list}", "is_done": False, "code": 200})
+        self.redis_client.rpush(self.redis_key, v)
+
+    def on_information_gathering_start(self, **kwargs):
+        logger.info('on_information_gathering_start')
+
+        v = json.dumps({"state": "information_gathering_start", "message": "Start browsing the Internet. (Step 2 /4)", "is_done": False, "code": 200})
+        self.redis_client.rpush(self.redis_key, v)
+
+    def on_dialogue_turn_end(self, dlg_turn, **kwargs):
+        logger.info('on_dialogue_turn_end')
+        urls = list(set([r.url for r in dlg_turn.search_results]))
+        msg = ""
+        for url in urls:
+            msg += f'Finish browsing {url}\n'
+
+        v = json.dumps({"state": "dialogue_turn_end", "message": msg, "is_done": False, "code": 200})
+        self.redis_client.rpush(self.redis_key, v)
+
+    def on_information_gathering_end(self, **kwargs):
+        logger.info('on_information_gathering_end')
+
+        v = json.dumps({"state": "information_gathering_start", "message": "Finish collecting information.", "is_done": False, "code": 200})
+        self.redis_client.rpush(self.redis_key, v)
+
+    def on_information_organization_start(self, **kwargs):
+        logger.info('on_information_organization_start')
+
+        v = json.dumps({"state": "information_organization_start", "message": "Start organizing information into a hierarchical outline. (Step 3 / 4)", "is_done": False, "code": 200})
+        self.redis_client.rpush(self.redis_key, v)
+
+    def on_direct_outline_generation_end(self, outline: str, **kwargs):
+        logger.info('on_direct_outline_generation_end')
+
+        v = json.dumps({"state": "direct_outline_generation_end", "message": "Finish leveraging the internal knowledge of the large language model.", "is_done": False, "code": 200})
+        self.redis_client.rpush(self.redis_key, v)
+
+    def on_outline_refinement_end(self, outline: str, **kwargs):
+        logger.info('on_outline_refinement_end')
+
+        v = json.dumps({"state": "outline_refinement_end", "message": "Finish leveraging the collected information.", "is_done": False, "code": 200})
+        self.redis_client.rpush(self.redis_key, v)

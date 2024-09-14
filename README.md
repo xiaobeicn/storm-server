@@ -27,13 +27,11 @@ pip install -r requirements.txt
 
 ### Start
 ```sh
-#local
-uvicorn main:app --host 0.0.0.0 --port 8080 --reload
+python main.py
 ```
 
 ### Docs
 * http://127.0.0.1:8080/api/v1/docs
-* http://127.0.0.1:8080/api/v1/redoc
 
 ### Openapi - check_sensitive_info
 ```json
@@ -132,19 +130,63 @@ Fully parsed file, sending response back!
 └── url_to_info.json
 ```
 
-### SSE
-```json
-[
-    {"event_id": 1, "message": "Have successfully set up llm provider", "is_done": false, "code": 200},
-    {"event_id": 2, "message": "I am brain**STORM**ing now to research the topic. (This may take 2-3 minutes.)", "is_done": false, "code": 200},
-    {"event_id": 3, "message": "brain ** STORM ** ing complete!", "is_done": false, "code": 200},
-    {"event_id": 4, "message": "Now I will connect the information I found for your reference. (This may take 4-5 minutes.)", "is_done": false, "code": 200},
-    {"event_id": 5, "message": "information synthesis complete!", "is_done": false, "code": 200},
-    {"event_id": 6, "message": "Updating article in database", "code": 200, "is_done": false},
-    {"event_id": 7, "message": "Have successfully uploaded to db, sending article content back!", "is_done": true, "code": 200}
-]
+### Logging
+```text
+***** Execution time *****
+run_knowledge_curation_module: 116.6072 seconds
+run_outline_generation_module: 9.6553 seconds
+run_article_generation_module: 38.8765 seconds
+run_article_polishing_module: 7.7596 seconds
+***** Token usage of language models: *****
+run_knowledge_curation_module
+    gpt-4o-mini-2024-07-18: {'prompt_tokens': 8377, 'completion_tokens': 3306}
+    gpt-4o-2024-08-06: {'prompt_tokens': 0, 'completion_tokens': 0}
+run_outline_generation_module
+    gpt-4o-mini-2024-07-18: {'prompt_tokens': 0, 'completion_tokens': 0}
+    gpt-4o-2024-08-06: {'prompt_tokens': 570, 'completion_tokens': 498}
+run_article_generation_module
+    gpt-4o-mini-2024-07-18: {'prompt_tokens': 0, 'completion_tokens': 0}
+    gpt-4o-2024-08-06: {'prompt_tokens': 9253, 'completion_tokens': 3116}
+run_article_polishing_module
+    gpt-4o-mini-2024-07-18: {'prompt_tokens': 0, 'completion_tokens': 0}
+    gpt-4o-2024-08-06: {'prompt_tokens': 3122, 'completion_tokens': 404}
+***** Number of queries of retrieval models: *****
+run_knowledge_curation_module: {'SerperRM': 9}
+run_outline_generation_module: {'SerperRM': 0}
+run_article_generation_module: {'SerperRM': 0}
+run_article_polishing_module: {'SerperRM': 0}
 ```
 
+### SSE
+```text
+data: {"state": "pre_writing", "is_done": false, "code": 200}
+
+data: {"state": "identify_perspective_start", "is_done": false, "code": 200}
+
+data: {"state": "identify_perspective_end", "is_done": false, "code": 200}
+
+data: {"state": "information_gathering_start", "is_done": false, "code": 200}
+
+data: {"state": "dialogue_turn_end", "is_done": false, "code": 200}
+
+data: {"state": "dialogue_turn_end", "is_done": false, "code": 200}
+
+data: {"state": "dialogue_turn_end", "is_done": false, "code": 200}
+
+data: {"state": "information_gathering_start", "is_done": false, "code": 200}
+
+data: {"state": "information_organization_start", "is_done": false, "code": 200}
+
+data: {"state": "direct_outline_generation_end", "is_done": false, "code": 200}
+
+data: {"state": "outline_refinement_end", "is_done": false, "code": 200}
+
+data: {"state": "pre_writing_end", "is_done": false, "code": 200}
+
+data: {"state": "generate_article_end", "is_done": false, "code": 200}
+
+data: {"state": "completed", "is_done": true, "code": 200}
+```
 
 ### Citations
 ```bibtex

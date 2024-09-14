@@ -1,5 +1,4 @@
 import secrets
-import warnings
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -7,6 +6,7 @@ from pydantic import (
     BeforeValidator,
     computed_field,
     MySQLDsn,
+    RedisDsn
 )
 from pydantic_core import MultiHostUrl
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,14 +29,14 @@ class Settings(BaseSettings):
     # 60 minutes * 24 hours * 8 days = 8 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     DOMAIN: str = "localhost"
-    ENVIRONMENT: Literal["local", "staging", "production"] = "local"
+    ENVIRONMENT: Literal["local", "test", "prod"] = "local"
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def server_host(self) -> str:
         # Use HTTPS for anything other than local development
         if self.ENVIRONMENT == "local":
-            return f"http://{self.DOMAIN}"
+            return f'http://{self.DOMAIN}'
         return f"https://{self.DOMAIN}"
 
     BACKEND_CORS_ORIGINS: Annotated[
@@ -45,11 +45,15 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str
 
+    LOG_PATH: str
+    LOG_LEVEL: str
+
     DB_HOST: str
     DB_PORT: int = 3306
     DB_DATABASE: str = ""
     DB_USER: str
     DB_PASSWORD: str = ""
+    DB_DEBUG: bool = False
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -63,10 +67,26 @@ class Settings(BaseSettings):
             path=self.DB_DATABASE,
         )
 
+    REDIS_HOST: str
+    REDIS_PORT: int = 6379
+    REDIS_USER: str | None = None
+    REDIS_PASSWORD: str | None = None
+    REDIS_DB: str | None = None
+
+    @property
+    def REDIS_URI(self) -> RedisDsn:
+        auth = f"{self.REDIS_USER}:{self.REDIS_PASSWORD}@" if self.REDIS_USER or self.REDIS_PASSWORD else ''
+        path = f"/{self.REDIS_DB}" if self.REDIS_DB else ''
+        dsn = f"redis://{auth}{self.REDIS_HOST}:{self.REDIS_PORT}{path}"
+        return RedisDsn(dsn)
+
     OPENAI_API_KEY: str = ""
     YDC_API_KEY: str = ""
+    SERPER_API_KEY: str = ""
     OUTPUT_DIR: str = ""
     DELETE_ARTICLE_OUTPUT_DIR: bool = True
+
+    HTTP_PROXY: str = ""
 
 
 settings = Settings()
