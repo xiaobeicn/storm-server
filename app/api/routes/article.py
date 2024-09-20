@@ -23,7 +23,7 @@ router = APIRouter()
 
 
 @router.post("/start-model", response_model=ArticleCreatePublic)
-async def start_model(*, session: SessionDep, redis_client: RedisDep, current_user: CurrentUser, article_in: ArticleCreate, background_tasks: BackgroundTasks) -> Any:
+def start_model(*, session: SessionDep, redis_client: RedisDep, current_user: CurrentUser, article_in: ArticleCreate, background_tasks: BackgroundTasks) -> Any:
     user_id = current_user.id
 
     item = session.query(Article).filter_by(title=article_in.title, owner_id=user_id).first()
@@ -198,7 +198,7 @@ def _redis_key(article_id: int):
 
 
 @router.get("/{article_id}/update-sse")
-async def update_sse(*, session: SessionDep, redis_client: RedisDep, current_user: CurrentUser, article_id: int):
+def update_sse(*, session: SessionDep, redis_client: RedisDep, current_user: CurrentUser, article_id: int):
     return StreamingResponse(_listen_to_stream(session, redis_client, current_user.id, article_id), media_type="text/event-stream")
 
 
