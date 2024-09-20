@@ -70,7 +70,6 @@ def _article_generate(session: SessionDep, redis_client: RedisDep, user_id: int,
 
     logger.info(f"Started set storm runner! State:{tmp_state}")
 
-    items = []
     if tmp_state == "pre_writing":
         callback_handler = storm.CallbackHandler(redis_client, redis_key)
         runner.run(
@@ -100,11 +99,7 @@ def _article_generate(session: SessionDep, redis_client: RedisDep, user_id: int,
     runner.summary()
     logger.info(f"Finished running runner! State:{tmp_state}")
 
-    if len(items) > 0:
-        tmp_state = "deduct_tokens"
-        redis_client.rpush(redis_key, json.dumps({"state": tmp_state, "message": "Deduct usage tokens", "is_done": False, "code": 200, "tokens": json.dumps(items)}))
-
-    if tmp_state in ["generate_article_end", "deduct_tokens"]:
+    if tmp_state == "generate_article_end":
         directory = util.article_directory(user_id, article.title)
         logger.info(f"Article_output_dir: {directory}")
 
