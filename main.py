@@ -8,6 +8,7 @@ from app.core.config import settings
 from app.core.log import logger
 
 if settings.HTTP_PROXY:
+    logger.info(f"set http_proxy to {settings.HTTP_PROXY}")
     os.environ['http_proxy'] = settings.HTTP_PROXY
     os.environ['https_proxy'] = settings.HTTP_PROXY
 
@@ -20,9 +21,8 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=f"{settings.API_V1_STR}/docs",
-    logger=logger,
+    redoc_url=None,
     debug=debug,
-    redoc_url=None
 )
 
 # Set all CORS enabled origins
