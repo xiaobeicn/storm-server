@@ -11,7 +11,7 @@ from starlette import status
 
 from app import util
 from app.api.deps import CurrentUser, SessionDep, RedisDep
-from app.constants import ArticleStatus, ReviewStatus, ArticleState
+from app.enum import EnumArticleStatus, EnumReviewStatus, EnumArticleState
 from app.core.config import settings
 from app.core.log import logger
 from app.crud import create_article, update_article, delete_article, reset_article
@@ -27,7 +27,7 @@ def start_model(*, session: SessionDep, redis_client: RedisDep, current_user: Cu
 
     item = session.query(Article).filter_by(title=article_in.title, owner_id=user_id).first()
 
-    if item and item.status == ArticleStatus.VALID:
+    if item and item.status == EnumArticleStatus.VALID:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="对不起，主题已经存在，请勿重复创建")
 
     response = storm.check_sensitive_info(article_in.title)
@@ -36,13 +36,13 @@ def start_model(*, session: SessionDep, redis_client: RedisDep, current_user: Cu
 
     check_result = response['choices'][0]['message']['content']
 
-    if check_result in [ReviewStatus.POINTLESS, ReviewStatus.SENSITIVE]:
-        if check_result == ReviewStatus.POINTLESS:
+    if check_result in [EnumReviewStatus.POINTLESS, EnumReviewStatus.SENSITIVE]:
+        if check_result == EnumReviewStatus.POINTLESS:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="对不起，请输入有具体意义的主题")
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="对不起，您输入的主题包含敏感信息，请尝试其他您感兴趣的主题")
 
-    if item and item.status == ArticleStatus.DELETED:
+    if item and item.status == EnumArticleStatus.DELETED:
         article = reset_article(session=session, db_article=item)
     else:
         article = create_article(session=session, article_in=article_in, owner_id=user_id)
@@ -56,7 +56,7 @@ def _article_generate(session: SessionDep, redis_client: RedisDep, user_id: int,
     redis_key = _redis_key(article.id)
     tmp_state = article.state
 
-    if not article.state == ArticleState.INIT:
+    if not article.state == EnumArticleState.INIT:
         redis_client.rpush(redis_key, json.dumps({"state": tmp_state, "message": "Not initiated", "is_done": False, "code": 500}))
         return
 
@@ -125,7 +125,7 @@ def _article_generate(session: SessionDep, redis_client: RedisDep, user_id: int,
                     rmtree(directory)
 
                 logger.info("Finished updating article in db")
-                redis_client.rpush(redis_key, json.dumps({"state": ArticleState.DONE, "message": "", "is_done": True, "code": 200}))
+                redis_client.rpush(redis_key, json.dumps({"state": EnumArticleState.DONE, "message": "", "is_done": True, "code": 200}))
             except Exception as e:
                 logger.error(f"Failed to update article in db: {e}")
                 redis_client.rpush(redis_key, json.dumps({"state": "fail_db", "message": "Failed to update article in db", "is_done": False, "code": 500}))
@@ -143,13 +143,13 @@ def _listen_to_stream(session: SessionDep, redis_client: RedisDep, user_id: int,
         article = session.get(Article, article_id)
         if not article:
             raise Exception("Article not found")
-        if not article.status == ArticleStatus.VALID:
+        if not article.status == EnumArticleStatus.VALID:
             raise Exception("Article is not available")
         if not article.owner_id == user_id:
             raise Exception("Not enough permissions")
 
-        if article.state == ArticleState.DONE:
-            yield "data: " + json.dumps({"state": ArticleState.DONE, "message": "", "is_done": True, "code": 200})
+        if article.state == EnumArticleState.DONE:
+            yield "data: " + json.dumps({"state": EnumArticleState.DONE, "message": "", "is_done": True, "code": 200})
             return
 
         redis_key = _redis_key(article_id)
@@ -230,12 +230,12 @@ def read_articles(*, session: SessionDep, current_user: CurrentUser, page: int =
     count_statement = (
         select(func.count())
         .select_from(Article)
-        .where(Article.owner_id == current_user.id, Article.status == ArticleStatus.VALID)
+        .where(Article.owner_id == current_user.id, Article.status == EnumArticleStatus.VALID)
     )
     statement = (
         select(Article.id, Article.title, Article.content_summary, Article.cdate)
         .select_from(Article)
-        .where(Article.owner_id == current_user.id, Article.status == ArticleStatus.VALID)
+        .where(Article.owner_id == current_user.id, Article.status == EnumArticleStatus.VALID)
         .offset(skip)
         .limit(pagesize)
         .order_by(desc(Article.cdate))
@@ -258,7 +258,7 @@ def delete_item(*, session: SessionDep, current_user: CurrentUser, article_id: i
     if not article.owner_id == current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="权限不足")
     delete_article(session=session, db_article=article)
-    if not article.status == ArticleStatus.DELETED:
+    if not article.status == EnumArticleStatus.DELETED:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="主题删除失败")
     if not settings.DELETE_ARTICLE_OUTPUT_DIR:
         directory = util.article_directory(current_user.id, article.title)

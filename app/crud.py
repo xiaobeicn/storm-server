@@ -2,7 +2,7 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from app.constants import ArticleStatus, ArticleState
+from app.enum import EnumArticleStatus, EnumArticleState
 from app.core.security import verify_password, get_password_hash
 from app.models import Article, ArticleCreate, ArticleUpdate, User, UserCreate
 
@@ -33,7 +33,7 @@ def authenticate(*, session: Session, username: str, password: str) -> User | No
 
 
 def create_article(*, session: Session, article_in: ArticleCreate, owner_id: int) -> Article:
-    db_article = Article.model_validate(article_in, update={"owner_id": owner_id, "status": ArticleStatus.VALID, "state": ArticleState.INIT})
+    db_article = Article.model_validate(article_in, update={"owner_id": owner_id, "status": EnumArticleStatus.VALID, "state": EnumArticleState.INIT})
     session.add(db_article)
     session.commit()
     session.refresh(db_article)
@@ -50,7 +50,7 @@ def update_article(*, session: Session, db_article: Article, article_in: Article
 
 
 def delete_article(*, session: Session, db_article: Article) -> Any:
-    db_article.sqlmodel_update({"status": ArticleStatus.DELETED})
+    db_article.sqlmodel_update({"status": EnumArticleStatus.DELETED})
     session.add(db_article)
     session.commit()
     session.refresh(db_article)
@@ -58,7 +58,7 @@ def delete_article(*, session: Session, db_article: Article) -> Any:
 
 
 def reset_article(*, session: Session, db_article: Article) -> Any:
-    db_article.sqlmodel_update({"status": ArticleStatus.VALID, "state": ArticleState.INIT, "content_summary": "", "content": None, "url_to_info": None})
+    db_article.sqlmodel_update({"status": EnumArticleStatus.VALID, "state": EnumArticleState.INIT, "content_summary": "", "content": None, "url_to_info": None})
     session.add(db_article)
     session.commit()
     session.refresh(db_article)

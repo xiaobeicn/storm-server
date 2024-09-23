@@ -15,7 +15,7 @@ from knowledge_storm.storm_wiki.modules.callback import BaseCallbackHandler
 
 from app.core.config import settings
 from app.core.log import logger
-from app.constants import LLMModel
+from app.enum import EnumLLMModel
 
 
 def set_storm_runner(user_id: int) -> STORMWikiRunner:
@@ -29,16 +29,16 @@ def set_storm_runner(user_id: int) -> STORMWikiRunner:
 
     openai_kwargs = {'api_key': settings.OPENAI_API_KEY, 'api_provider': 'openai', 'temperature': 1.0, 'top_p': 0.9}
 
-    llm_configs.set_conv_simulator_lm(OpenAIModel(model=LLMModel.GPT_4O_MINI, max_tokens=500, **openai_kwargs))
-    llm_configs.set_question_asker_lm(OpenAIModel(model=LLMModel.GPT_4O_MINI, max_tokens=500, **openai_kwargs))
-    llm_configs.set_outline_gen_lm(OpenAIModel(model=LLMModel.GPT_4O, max_tokens=400, **openai_kwargs))
-    llm_configs.set_article_gen_lm(OpenAIModel(model=LLMModel.GPT_4O, max_tokens=700, **openai_kwargs))
-    llm_configs.set_article_polish_lm(OpenAIModel(model=LLMModel.GPT_4O, max_tokens=4000, **openai_kwargs))
+    llm_configs.set_conv_simulator_lm(OpenAIModel(model=EnumLLMModel.GPT_4O_MINI, max_tokens=500, **openai_kwargs))
+    llm_configs.set_question_asker_lm(OpenAIModel(model=EnumLLMModel.GPT_4O_MINI, max_tokens=500, **openai_kwargs))
+    llm_configs.set_outline_gen_lm(OpenAIModel(model=EnumLLMModel.GPT_4O, max_tokens=400, **openai_kwargs))
+    llm_configs.set_article_gen_lm(OpenAIModel(model=EnumLLMModel.GPT_4O, max_tokens=700, **openai_kwargs))
+    llm_configs.set_article_polish_lm(OpenAIModel(model=EnumLLMModel.GPT_4O, max_tokens=4000, **openai_kwargs))
 
     engine_args = STORMWikiRunnerArguments(output_dir=current_working_dir, max_conv_turn=3, max_perspective=3, search_top_k=3, retrieve_top_k=5)
     logger.info("Successfully set up engine args")
 
-    if LLMModel.RM == 'YouRM':
+    if EnumLLMModel.RM == 'YouRM':
         rm = YouRM(ydc_api_key=settings.YDC_API_KEY, k=engine_args.search_top_k)
     else:
         data = {"autocorrect": True, "location": "China", "gl": "cn", "hl": "zh-cn", "num": 10, "page": 1}
