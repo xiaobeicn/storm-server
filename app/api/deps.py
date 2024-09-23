@@ -10,14 +10,11 @@ from pydantic import ValidationError
 from redis import Redis
 from sqlmodel import Session
 
-from app.core import log
 from app.core import security
 from app.core.config import settings
 from app.core.db import engine
 from app.core.redis import redis_client
 from app.models import TokenPayload, User
-
-logger = log.setup_logging()
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"

@@ -2,10 +2,8 @@ import json
 import os
 import re
 
-from app.core import log
 from app.core.config import settings
-
-logger = log.setup_logging()
+from app.core.log import logger
 
 
 def article_directory(account_id: int, title):

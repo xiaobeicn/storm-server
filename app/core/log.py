@@ -4,17 +4,26 @@ from logging.handlers import TimedRotatingFileHandler
 from app.core.config import settings
 
 
-def setup_logging():
-    logger = logging.getLogger("storm_app_logger")
-    logger.setLevel(settings.LOG_LEVEL)
-    logger.propagate = False
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+class LoggerSingleton:
+    _instance = None
 
-    if not logger.hasHandlers():
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(LoggerSingleton, cls).__new__(cls)
+            cls._instance.logger = cls._setup_logging()
+        return cls._instance.logger
+
+    @classmethod
+    def _setup_logging(cls):
+        logger_app = logging.getLogger("app_logger")
+        logger_app.setLevel(settings.LOG_LEVEL)
+        logger_app.propagate = False
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
         if settings.ENVIRONMENT == "local":
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
+            logger_app.addHandler(console_handler)
         else:
             debug_handler = TimedRotatingFileHandler(settings.LOG_PATH + '/app_debug.log', when='midnight', interval=1, backupCount=30)
             debug_handler.setLevel(logging.DEBUG)
@@ -44,8 +53,11 @@ def setup_logging():
             info_handler.addFilter(InfoFilter())
             error_handler.addFilter(ErrorFilter())
 
-            logger.addHandler(debug_handler)
-            logger.addHandler(info_handler)
-            logger.addHandler(error_handler)
+            logger_app.addHandler(debug_handler)
+            logger_app.addHandler(info_handler)
+            logger_app.addHandler(error_handler)
 
-    return logger
+        return logger_app
+
+
+logger = LoggerSingleton()

@@ -13,11 +13,9 @@ from knowledge_storm import (
 from knowledge_storm.rm import SerperRM
 from knowledge_storm.storm_wiki.modules.callback import BaseCallbackHandler
 
-from app.core import log
 from app.core.config import settings
+from app.core.log import logger
 from app.constants import LLMModel
-
-logger = log.setup_logging()
 
 
 def set_storm_runner(user_id: int) -> STORMWikiRunner:

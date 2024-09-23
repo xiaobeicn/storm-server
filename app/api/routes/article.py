@@ -12,12 +12,11 @@ from starlette import status
 from app import util
 from app.api.deps import CurrentUser, SessionDep, RedisDep
 from app.constants import ArticleStatus, ReviewStatus, ArticleState
-from app.core import storm, log
 from app.core.config import settings
+from app.core.log import logger
 from app.crud import create_article, update_article, delete_article, reset_article
 from app.models import Article, ArticleCreate, ArticleUpdate, ArticleCreatePublic, ArticleStatePublic, ArticleInfoPublic, ArticlesPublic, Message
 
-logger = log.setup_logging()
 
 router = APIRouter()
 

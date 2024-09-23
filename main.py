@@ -1,23 +1,27 @@
 import os
 
-import uvicorn
 from fastapi import FastAPI
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
-from app.core import log
 from app.core.config import settings
+from app.core.log import logger
 
 if settings.HTTP_PROXY:
     os.environ['http_proxy'] = settings.HTTP_PROXY
     os.environ['https_proxy'] = settings.HTTP_PROXY
 
-logger = log.setup_logging()
+if settings.ENVIRONMENT == "local":
+    debug = True
+else:
+    debug = False
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url=f"{settings.API_V1_STR}/docs",
+    logger=logger,
+    debug=debug,
     redoc_url=None
 )
 
@@ -42,8 +46,5 @@ async def root():
 
 
 if __name__ == "__main__":
-    if settings.ENVIRONMENT == "local":
-        reload = True
-    else:
-        reload = False
-    uvicorn.run(app='main:app', host="0.0.0.0", port=8080, reload=reload)
+    import uvicorn
+    uvicorn.run(app='main:app', host="0.0.0.0", port=8080, reload=debug)
